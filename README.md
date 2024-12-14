@@ -11,7 +11,7 @@ A powerful automation tool for TONxDAO tasks and farming, designed for efficienc
 Join our growing community:
 
 - 🔔 **Main Channel**: [FlexxRichie Airdrops](https://t.me/airdrop3arn)
-- 💬 **Twitter Page**: [Smart Airdrop](https://twitter.com/flexxrichie)
+- 💬 **Twitter Page**: [FlexxRichie](https://twitter.com/flexxrichie)
 
 
 ## ✨ Features
