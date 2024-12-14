@@ -31,7 +31,7 @@ Follow these steps to get started:
 1. Clone the repository:
    ```bash
    git clone https://github.com/fl3xxrichie/tonxD.git
-   cd tonxdao-bot
+   cd tonxD
    ```
 
 2. Install required packages:
