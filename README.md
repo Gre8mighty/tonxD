@@ -13,7 +13,6 @@ Join our growing community:
 - 🔔 **Main Channel**: [FlexxRichie Airdrops](https://t.me/airdrop3arn)
 - 💬 **Twitter Page**: [FlexxRichie](https://twitter.com/flexxrichie)
 
-
 ## ✨ Features
 
 Our bot comes equipped with powerful features designed to maximize your efficiency:
@@ -26,24 +25,109 @@ Our bot comes equipped with powerful features designed to maximize your efficien
 
 ## 🛠️ Installation
 
-Follow these steps to get started:
+### Prerequisites
 
-1. Clone the repository:
+Before you begin, ensure you have the following installed on your system:
+
+1. **Python 3.8 or higher**:
+   - Windows: Download and install from [python.org](https://www.python.org/downloads/)
+   - Linux: `sudo apt-get install python3 python3-pip`
+   - macOS: `brew install python`
+   - Termux: `pkg install python`
+
+2. **Git**:
+   - Windows: Download and install from [git-scm.com](https://git-scm.com/downloads)
+   - Linux: `sudo apt-get install git`
+   - macOS: `brew install git`
+   - Termux: `pkg install git`
+
+### Setup Steps
+
+1. **Clone the repository**:
    ```bash
    git clone https://github.com/fl3xxrichie/tonxD.git
    cd tonxD
    ```
 
-2. Install required packages:
+2. **Create and activate a virtual environment** (recommended):
    ```bash
+   # Windows
+   python -m venv venv
+   .\venv\Scripts\activate
+
+   # Linux/macOS
+   python3 -m venv venv
+   source venv/bin/activate
+
+   # Termux
+   python -m venv venv
+   source venv/bin/activate
+   ```
+
+3. **Install dependencies**:
+   ```bash
+   # Upgrade pip first
+   python -m pip install --upgrade pip
+
+   # Install requirements
    pip install -r requirements.txt
    ```
 
-3. Configure your settings:
+4. **Verify installation**:
    ```bash
-   # Edit config.json with your preferred settings
-   # Add your auth data to data.txt
+   # Check if required packages are installed
+   pip list | grep "smart-airdrop-claimer"
+   pip list | grep "websocket-client"
    ```
+
+### Termux-Specific Setup
+
+If you're using Termux, follow these additional steps:
+
+1. **Update Termux packages**:
+   ```bash
+   pkg update && pkg upgrade -y
+   ```
+
+2. **Install required packages**:
+   ```bash
+   pkg install python python-pip git libjpeg-turbo
+   ```
+
+3. **Install development tools**:
+   ```bash
+   pkg install build-essential
+   ```
+
+4. **Set storage permissions** (if needed):
+   ```bash
+   termux-setup-storage
+   ```
+
+### Troubleshooting Common Installation Issues
+
+If you encounter any errors during installation:
+
+1. **SSL Certificate errors**:
+   ```bash
+   pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements.txt
+   ```
+
+2. **Permission errors on Linux/macOS**:
+   ```bash
+   sudo pip install -r requirements.txt
+   ```
+
+3. **Permission errors on Termux**:
+   ```bash
+   pip install --user -r requirements.txt
+   ```
+
+4. **Missing build tools**:
+   - Windows: Install Visual C++ Build Tools
+   - Linux: `sudo apt-get install python3-dev build-essential`
+   - macOS: `xcode-select --install`
+   - Termux: `pkg install clang python-dev`
 
 ## 🚀 Usage Guide
 
@@ -67,9 +151,9 @@ Setting up and running the bot is straightforward:
 
 3. **Run the Bot**:
    ```bash
+   # Make sure your virtual environment is activated
    python bot.py
    ```
-
 
 ## 📝 License
 
