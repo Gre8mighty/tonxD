@@ -1,126 +1,186 @@
 import sys
 import time
 from typing import List
+from datetime import datetime
+import json
 
 sys.dont_write_bytecode = True
 
 from smart_airdrop_claimer import base
-from core.token import get_token, get_centrifugo_token
-from core.info import get_info
-from core.task import process_check_in, process_do_task
-from core.ws import process_farm
-from core.banner import create_banner
+from core import (
+    get_token,
+    get_centrifugo_token,
+    get_info,
+    process_check_in,
+    process_do_task,
+    process_farm,
+    create_banner
+)
 
 class TerminalStyle:
-    """Terminal styling constants for enhanced visual feedback"""
-    # Basic colors
-    GREEN = '\033[38;5;82m'      # Bright lime green for success
-    YELLOW = '\033[38;5;220m'    # Warm yellow for warnings/processing
-    RED = '\033[38;5;196m'       # Bright red for errors
-    WHITE = '\033[38;5;255m'     # Pure white for normal text
-    BLUE = '\033[38;5;51m'       # Cyan blue for info
-    PURPLE = '\033[38;5;183m'    # Light purple for statistics
+    """Enhanced terminal styling with rich colors and formatting"""
+    # Basic Colors
+    BLACK = '\033[38;5;0m'
+    RED = '\033[38;5;196m'
+    GREEN = '\033[38;5;82m'
+    YELLOW = '\033[38;5;220m'
+    BLUE = '\033[38;5;51m'
+    MAGENTA = '\033[38;5;201m'
+    CYAN = '\033[38;5;39m'
+    WHITE = '\033[38;5;255m'
     
-    # Text styles
+    # Bright Colors
+    BRIGHT_RED = '\033[38;5;203m'
+    BRIGHT_GREEN = '\033[38;5;118m'
+    BRIGHT_YELLOW = '\033[38;5;227m'
+    BRIGHT_BLUE = '\033[38;5;81m'
+    BRIGHT_MAGENTA = '\033[38;5;207m'
+    BRIGHT_CYAN = '\033[38;5;87m'
+    
+    # Pastel Colors
+    PASTEL_RED = '\033[38;5;211m'
+    PASTEL_GREEN = '\033[38;5;157m'
+    PASTEL_YELLOW = '\033[38;5;229m'
+    PASTEL_BLUE = '\033[38;5;117m'
+    PASTEL_MAGENTA = '\033[38;5;219m'
+    PASTEL_CYAN = '\033[38;5;159m'
+    
+    # Special Colors
+    ORANGE = '\033[38;5;214m'
+    PURPLE = '\033[38;5;141m'
+    PINK = '\033[38;5;218m'
+    GOLD = '\033[38;5;220m'
+    SILVER = '\033[38;5;247m'
+    BRONZE = '\033[38;5;172m'
+    
+    # Background Colors
+    BG_RED = '\033[48;5;196m'
+    BG_GREEN = '\033[48;5;82m'
+    BG_YELLOW = '\033[48;5;220m'
+    BG_BLUE = '\033[48;5;51m'
+    BG_MAGENTA = '\033[48;5;201m'
+    BG_CYAN = '\033[48;5;39m'
+    
+    # Text Styles
     BOLD = '\033[1m'
     ITALIC = '\033[3m'
     UNDERLINE = '\033[4m'
+    BLINK = '\033[5m'
+    REVERSE = '\033[7m'
     RESET = '\033[0m'
     
-    # Background colors for highlights
-    BG_RED = '\033[41m'
-    BG_GREEN = '\033[42m'
-    BG_YELLOW = '\033[43m'
+    # Compound Styles
+    SUCCESS = f"{BRIGHT_GREEN}{BOLD}"
+    ERROR = f"{BRIGHT_RED}{BOLD}"
+    WARNING = f"{BRIGHT_YELLOW}{BOLD}"
+    INFO = f"{BRIGHT_BLUE}{BOLD}"
+    CRITICAL = f"{BG_RED}{WHITE}{BOLD}"
+    HIGHLIGHT = f"{BG_YELLOW}{BLACK}{BOLD}"
 
 class TONxDAO:
-    """Main bot class for TONxDAO automation"""
+    """Main bot class for TONxDAO automation with enhanced visual feedback"""
     
     def __init__(self):
-        """Initialize bot configuration and styling"""
-        # File paths
         self.data_file = base.file_path(file_name="data.txt")
         self.config_file = base.file_path(file_name="config.json")
-        
-        # Visual elements
-        self.line = "─" * 50  # Using Unicode box drawing character
+        self.line = "─" * 60
         self.banner = create_banner()
+        self.style = TerminalStyle()
         
-        # Load configuration
-        self.auto_check_in = self._get_config("auto-check-in")
-        self.auto_do_task = self._get_config("auto-do-task")
-        self.auto_farm = self._get_config("auto-farm")
+        # Load configuration with proper parsing
+        self.load_config()
 
-    def _get_config(self, name: str) -> bool:
-        """Get configuration value with error handling"""
+    def load_config(self):
+        """Load and validate all configuration values"""
         try:
-            return base.get_config(self.config_file, name)
+            with open(self.config_file, 'r') as f:
+                config = json.load(f)
+            
+            # Parse boolean configs
+            self.auto_check_in = self._parse_bool_value(config.get('auto-check-in', 'false'))
+            self.auto_do_task = self._parse_bool_value(config.get('auto-do-task', 'false'))
+            self.auto_farm = self._parse_bool_value(config.get('auto-farm', 'false'))
+            
+            # Parse wait time
+            wait_time = int(config.get('wait-time', '360'))
+            if wait_time <= 0:
+                raise ValueError("Wait time must be positive")
+            self.wait_time = wait_time * 60  # Convert to seconds
+            
         except Exception as e:
-            self._print_error(f"Failed to load config {name}: {str(e)}")
-            return False
+            self._print_error(f"Failed to load config: {str(e)}")
+            # Set default values
+            self.auto_check_in = True
+            self.auto_do_task = True
+            self.auto_farm = True
+            self.wait_time = 360 * 60  # 360 minutes in seconds
+
+    def _parse_bool_value(self, value: str) -> bool:
+        """Parse string boolean value"""
+        if isinstance(value, str):
+            return value.lower() == 'true'
+        return bool(value)
+
+    def _print_header(self, text: str):
+        """Print stylized header with timestamp"""
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        print(f"\n{self.style.PURPLE}{self.line}")
+        print(f"{self.style.GOLD}[{timestamp}] {self.style.BRIGHT_CYAN}{text}")
+        print(f"{self.style.PURPLE}{self.line}{self.style.RESET}\n")
 
     def _print_status(self, message: str, status: bool = None):
-        """Print status message with appropriate styling"""
+        timestamp = datetime.now().strftime("%H:%M:%S")
         if status is None:
-            print(f"{TerminalStyle.BLUE}{message}{TerminalStyle.RESET}")
+            print(f"{self.style.SILVER}[{timestamp}] {self.style.INFO}{message}{self.style.RESET}")
         elif status:
-            print(f"{TerminalStyle.GREEN}✓ {message}{TerminalStyle.RESET}")
+            print(f"{self.style.SILVER}[{timestamp}] {self.style.SUCCESS}✓ {message}{self.style.RESET}")
         else:
-            print(f"{TerminalStyle.RED}✗ {message}{TerminalStyle.RESET}")
+            print(f"{self.style.SILVER}[{timestamp}] {self.style.ERROR}✗ {message}{self.style.RESET}")
 
     def _print_error(self, message: str):
-        """Print error message with styling"""
-        print(f"{TerminalStyle.BG_RED}{TerminalStyle.WHITE} ERROR {TerminalStyle.RESET} {TerminalStyle.RED}{message}{TerminalStyle.RESET}")
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        print(f"{self.style.SILVER}[{timestamp}] {self.style.CRITICAL} ERROR {self.style.RESET} {self.style.ERROR}{message}{self.style.RESET}")
 
     def _print_warning(self, message: str):
-        """Print warning message with styling"""
-        print(f"{TerminalStyle.YELLOW}⚠ {message}{TerminalStyle.RESET}")
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        print(f"{self.style.SILVER}[{timestamp}] {self.style.WARNING}⚠ {message}{self.style.RESET}")
 
     def _print_info(self, message: str):
-        """Print info message with styling"""
-        print(f"{TerminalStyle.BLUE}ℹ {message}{TerminalStyle.RESET}")
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        print(f"{self.style.SILVER}[{timestamp}] {self.style.INFO}ℹ {message}{self.style.RESET}")
 
     def _print_stats(self, label: str, value: str):
-        """Print statistics with styling"""
-        print(f"{TerminalStyle.PURPLE}{label}: {TerminalStyle.WHITE}{value}{TerminalStyle.RESET}")
+        print(f"{self.style.PASTEL_BLUE}{label}: {self.style.PASTEL_YELLOW}{value}{self.style.RESET}")
 
     def _print_separator(self):
-        """Print separator line with styling"""
-        print(f"{TerminalStyle.BLUE}{self.line}{TerminalStyle.RESET}")
+        print(f"{self.style.PURPLE}{self.line}{self.style.RESET}")
 
     def _process_account(self, account_data: str, account_num: int, total_accounts: int):
-        """Process a single account with error handling"""
         try:
-            self._print_info(f"Processing Account {account_num}/{total_accounts}")
+            self._print_header(f"Processing Account {account_num}/{total_accounts}")
             
-            # Get authentication token
             token = get_token(data=account_data)
             if not token:
                 self._print_error("Failed to get authentication token")
                 return
 
-            # Get account information
             dao_id = get_info(token=token)
             if not dao_id:
                 self._print_error("Failed to get account information")
                 return
 
-            # Get centrifugo token
             centrifugo_token = get_centrifugo_token(token=token)
             if not centrifugo_token:
                 self._print_error("Failed to get centrifugo token")
                 return
 
-            # Process automated tasks
             self._handle_automated_tasks(token, centrifugo_token, dao_id)
-            
-            # Final account info update
             get_info(token=token)
             
         except Exception as e:
             self._print_error(f"Account processing failed: {str(e)}")
 
     def _handle_automated_tasks(self, token: str, centrifugo_token: str, dao_id: str):
-        """Handle all automated tasks for an account"""
         # Check-in processing
         if self.auto_check_in:
             self._print_status("Auto Check-in", True)
@@ -143,44 +203,44 @@ class TONxDAO:
             self._print_status("Auto Farming Disabled", False)
 
     def main(self):
-        """Main bot execution loop"""
         while True:
             try:
                 base.clear_terminal()
-                print(self.banner)
+                print(f"{self.style.GOLD}{self.banner}{self.style.RESET}")
                 
-                # Load account data
                 with open(self.data_file, "r") as f:
                     accounts = f.read().splitlines()
                 
                 total_accounts = len(accounts)
+                self._print_header("TONxDAO Bot Status")
                 self._print_stats("Total Accounts", str(total_accounts))
+                self._print_stats("Auto Check-in", "Enabled" if self.auto_check_in else "Disabled")
+                self._print_stats("Auto Task", "Enabled" if self.auto_do_task else "Disabled")
+                self._print_stats("Auto Farm", "Enabled" if self.auto_farm else "Disabled")
+                self._print_stats("Wait Time", f"{int(self.wait_time/60)} minutes")
                 self._print_separator()
 
-                # Process each account
                 for idx, account_data in enumerate(accounts, 1):
                     self._process_account(account_data, idx, total_accounts)
                     self._print_separator()
 
-                # Wait before next cycle
-                wait_time = 60 * 60  # 1 hour
-                self._print_warning(f"Waiting {int(wait_time/60)} minutes until next cycle")
-                time.sleep(wait_time)
+                self._print_warning(f"Waiting {int(self.wait_time/60)} minutes until next cycle")
+                time.sleep(self.wait_time)
                 
             except KeyboardInterrupt:
                 self._print_warning("Bot stopped by user")
                 sys.exit(0)
             except Exception as e:
                 self._print_error(f"Main loop error: {str(e)}")
-                time.sleep(5)  # Brief pause before retry
+                time.sleep(5)
 
 if __name__ == "__main__":
     try:
         txd = TONxDAO()
         txd.main()
     except KeyboardInterrupt:
-        print(f"\n{TerminalStyle.YELLOW}Bot terminated by user{TerminalStyle.RESET}")
+        print(f"\n{TerminalStyle.WARNING}Bot terminated by user{TerminalStyle.RESET}")
         sys.exit(0)
     except Exception as e:
-        print(f"\n{TerminalStyle.BG_RED}{TerminalStyle.WHITE} CRITICAL ERROR {TerminalStyle.RESET} {str(e)}")
+        print(f"\n{TerminalStyle.CRITICAL}CRITICAL ERROR {TerminalStyle.RESET} {str(e)}")
         sys.exit(1)
