@@ -2,8 +2,5 @@
   "auto-check-in": "true",
   "auto-do-task": "true",
   "auto-farm": "true",
-  "debug-mode": "false",
-  "wait-time": "3600",
-  "retry-attempts": "3",
-  "telegram-notifications": "false"
+  "wait-time": "360"
 }
